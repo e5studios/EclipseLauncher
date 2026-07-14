@@ -113,6 +113,8 @@ document.getElementById('launch_button').addEventListener('click', async e => {
     Modpack.installTestModpack()
     eclipseLaunchButton.textContent = 'JUGAR'
     alert('Instalación de prueba completada.')
+    Offline.saveUsername('ZekyWow')
+    console.log(Offline.getUsername())
     return
 }
     loggerLanding.info('Launching game..')
