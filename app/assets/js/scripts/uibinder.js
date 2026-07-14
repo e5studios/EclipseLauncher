@@ -8,6 +8,7 @@ const { Type }      = require('helios-distribution-types')
 
 const AuthManager   = require('./assets/js/authmanager')
 const ConfigManager = require('./assets/js/configmanager')
+const EclipseOfflineConfig = require('./assets/js/scripts/eclipse/offline')
 const { DistroAPI } = require('./assets/js/distromanager')
 
 let rscShouldLoad = false
@@ -80,20 +81,12 @@ async function showMainUI(data){
             validateSelectedAccount()
         }
 
-            if(true){
+            if (EclipseOfflineConfig.getUsername() === '') {
             currentView = VIEWS.welcome
             $(VIEWS.welcome).fadeIn(1000)
-            } else {
-            if(isLoggedIn){
-                currentView = VIEWS.landing
-                $(VIEWS.landing).fadeIn(1000)
-            } else {
-                loginOptionsCancelEnabled(false)
-                loginOptionsViewOnLoginSuccess = VIEWS.landing
-                loginOptionsViewOnLoginCancel = VIEWS.loginOptions
-                currentView = VIEWS.loginOptions
-                $(VIEWS.loginOptions).fadeIn(1000)
-            }
+        } else {
+            currentView = VIEWS.landing
+            $(VIEWS.landing).fadeIn(1000)
         }
 
         setTimeout(() => {
