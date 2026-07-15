@@ -30,7 +30,9 @@ const {
 // Internal Requirements
 const DiscordWrapper          = require('./assets/js/discordwrapper')
 const ProcessBuilder          = require('./assets/js/processbuilder')
+const EclipseOffline = require('./assets/js/scripts/eclipse/offline')
 const Modpack = require('./assets/js/scripts/eclipse/modpack')
+const Download = require('./assets/js/scripts/eclipse/download')
 
 // Launch Elements
 const launch_content          = document.getElementById('launch_content')
@@ -40,6 +42,7 @@ const launch_progress_label   = document.getElementById('launch_progress_label')
 const launch_details_text     = document.getElementById('launch_details_text')
 const server_selection_button = document.getElementById('server_selection_button')
 const user_text               = document.getElementById('user_text')
+user_text.innerHTML = EclipseOffline.getUsername() || 'Jugador'
 
 const loggerLanding = LoggerUtil.getLogger('Landing')
 
@@ -110,11 +113,36 @@ if (Modpack.isModpackInstalled()) {
 // Bind launch button
 document.getElementById('launch_button').addEventListener('click', async e => {
     if (!Modpack.isModpackInstalled()) {
-    Modpack.installTestModpack()
+
+    eclipseLaunchButton.textContent = 'DESCARGANDO...'
+
+    await Download.downloadFile(
+        'https://github.com/e5studios/Abystale-Launcher-Files/releases/download/v1.0.0/Abystale.v1.0.0.zip',
+        Modpack.ZIP_FILE
+    )
+
+    eclipseLaunchButton.textContent = 'INSTALANDO...'
+
+    try {
+    Modpack.installModpackFromZip()
+    Modpack.deleteDownloadedZip()
+
     eclipseLaunchButton.textContent = 'JUGAR'
-    alert('Instalación de prueba completada.')
-    Offline.saveUsername('ZekyWow')
-    console.log(Offline.getUsername())
+    alert('Abystale se instaló correctamente.')
+} catch(err) {
+    console.error(err)
+
+    eclipseLaunchButton.textContent = 'DESCARGAR'
+
+    alert(
+        'Error al instalar Abystale:\n\n' +
+        err.message
+    )
+}
+
+    eclipseLaunchButton.textContent = 'JUGAR'
+
+    alert('Abystale se instaló correctamente.')
     return
 }
     loggerLanding.info('Launching game..')
@@ -160,11 +188,9 @@ document.getElementById('avatarOverlay').onclick = async e => {
 
 // Bind selected account
 function updateSelectedAccount(authUser){
-    let username = Lang.queryJS('landing.selectedAccount.noAccountSelected')
+    let username = EclipseOffline.getUsername() || 'Jugador'
+    
     if(authUser != null){
-        if(authUser.displayName != null){
-            username = authUser.displayName
-        }
         if(authUser.uuid != null){
             document.getElementById('avatarContainer').style.backgroundImage = `url('https://mc-heads.net/body/${authUser.uuid}/right')`
         }
@@ -187,11 +213,10 @@ function updateSelectedServer(serv){
     setLaunchEnabled(serv != null)
 }
 // Real text is set in uibinder.js on distributionIndexDone.
-server_selection_button.innerHTML = '&#8226; ' + Lang.queryJS('landing.selectedServer.loading')
-server_selection_button.onclick = async e => {
+/*server_selection_button.onclick = async e => {
     e.target.blur()
     await toggleServerSelection(true)
-}
+}*/
 
 // Update Mojang Status Color
 const refreshMojangStatuses = async function(){
