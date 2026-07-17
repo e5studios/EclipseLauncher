@@ -1,8 +1,75 @@
 <div id="landingContainer" style="display: none;">
+
+    <style>
+        /* =====================================================
+         * Eclipse Launcher - Project Title
+         * Developed by E5 Studios
+         * ===================================================== */
+        #projectTitleContainer{
+            position: absolute;
+            top: 78px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(58vw, 640px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            z-index: 6;
+            opacity: 0;
+            animation: eclipseProjectTitleFade 700ms ease forwards;
+        }
+
+        #projectTitleImage{
+            display: block;
+            width: 100%;
+            max-height: 175px;
+            object-fit: contain;
+            user-select: none;
+            -webkit-user-drag: none;
+            filter:
+                drop-shadow(0 5px 14px rgba(0, 0, 0, 0.55))
+                drop-shadow(0 0 22px rgba(118, 86, 196, 0.16));
+            transition:
+                opacity 280ms ease,
+                transform 280ms ease,
+                filter 280ms ease;
+        }
+
+        #projectTitleImage[hidden]{
+            display: none;
+        }
+
+        #projectTitleImage.eclipseProjectTitleChanging{
+            opacity: 0;
+            transform: translateY(-6px) scale(0.985);
+        }
+
+        @keyframes eclipseProjectTitleFade{
+            from{
+                opacity: 0;
+                transform: translate(-50%, -10px);
+            }
+            to{
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+    </style>
+
     <div id="upper">
+
+        <div id="projectTitleContainer" aria-hidden="true">
+            <img
+                id="projectTitleImage"
+                src="assets/images/projects_titles/abystale.png"
+                alt=""
+                draggable="false"
+            />
+        </div>
         <div id="left">
             <div id="image_seal_container">
-                <img id="image_seal" src="assets/images/SealCircle.png"/>
+                <img id="image_seal" src="assets/images/EclipseLogo.png"/>
                 <div id="updateAvailableTooltip"><%- lang('landing.updateAvailableTooltip') %></div>
             </div>
         </div>
@@ -87,13 +154,9 @@
             <div class="bot_wrapper">
                 <div id="content">
                     <div id="eclipseClientStatus">
-                         <span class="bot_label">ECLIPSE LAUNCHER BETA v1.0.0</span>
+                        <span class="bot_label">ECLIPSE LAUNCHER v1.0.0</span>
+                        <span class="bot_label" style="margin-left: 10px; opacity: 0.72;"></span>
                     </div>
-                    <div id="server_status_wrapper" style="display: none;">
-                        <span class="bot_label" id="landingPlayerLabel"><%- lang('landing.serverStatus') %></span>
-                        <span id="player_count"><%- lang('landing.serverStatusPlaceholder') %></span>
-                    </div>
-                    <div class="bot_divider" style="display: none;"></div>
                     <div id="mojangStatusWrapper" style="display: none;">
                         <span class="bot_label"><%- lang('landing.mojangStatus') %></span>
                         <span id="mojang_status_icon">&#8226;</span>
@@ -137,9 +200,9 @@
                 <div id="launch_content">
                     <button id="launch_button"><%- lang('landing.launchButton') %></button>
                     <div class="bot_divider"></div>
-                    <span id="server_selection_button" class="bot_label">
+                    <button id="server_selection_button" class="bot_label" type="button">
                         <%- lang('landing.selectedServer') %>
-                    </span>
+                    </button>
                 </div>
                 <div id="launch_details">
                     <div id="launch_details_left">
@@ -213,4 +276,115 @@
         </div>
     </div>
     <script src="./assets/js/scripts/landing.js"></script>
+    <script>
+        /**
+         * Eclipse Launcher - Visual identity of the selected project.
+         *
+         * Every registered project may define:
+         * - title: transparent PNG shown at the top.
+         * - background: HD image shown behind the landing page.
+         */
+        (() => {
+            const PROJECT_VISUALS = {
+                'Abystale-1.20.1': {
+                    title: 'assets/images/projects_titles/abystale.png',
+                    background: 'assets/images/projects_backgrounds/abystale.jpg'
+                }
+            }
+
+            const FALLBACK_VISUALS = {
+                title: null,
+                background: null
+            }
+
+            function getSelectedProjectId(){
+                try {
+                    return ConfigManager.getSelectedServer()
+                } catch (err) {
+                    console.warn('[Eclipse Launcher] No se pudo leer el proyecto seleccionado.', err)
+                    return null
+                }
+            }
+
+            function preloadImage(source){
+                return new Promise((resolve, reject) => {
+                    if(!source){
+                        resolve()
+                        return
+                    }
+
+                    const image = new Image()
+                    image.onload = () => resolve()
+                    image.onerror = reject
+                    image.src = source
+                })
+            }
+
+            async function updateProjectVisuals(projectId = getSelectedProjectId()){
+                const landing = document.getElementById('landingContainer')
+                const titleImage = document.getElementById('projectTitleImage')
+
+                if(landing == null){
+                    return
+                }
+
+                const visuals = PROJECT_VISUALS[projectId] || FALLBACK_VISUALS
+
+                // Update project title.
+                if(titleImage != null){
+                    titleImage.classList.add('eclipseProjectTitleChanging')
+
+                    window.setTimeout(() => {
+                        if(visuals.title){
+                            titleImage.hidden = false
+                            titleImage.src = visuals.title
+                        } else {
+                            titleImage.hidden = true
+                            titleImage.removeAttribute('src')
+                        }
+
+                        titleImage.classList.remove('eclipseProjectTitleChanging')
+                    }, 180)
+                }
+
+                // Update project background only after it has loaded.
+                if(visuals.background){
+                    try {
+                        await preloadImage(visuals.background)
+                        landing.style.setProperty(
+                            '--eclipse-project-background',
+                            `url("${visuals.background}")`
+                        )
+                    } catch (err) {
+                        console.error(
+                            `[Eclipse Launcher] No se pudo cargar el fondo de ${projectId}:`,
+                            visuals.background,
+                            err
+                        )
+                    }
+                } else {
+                    landing.style.setProperty(
+                        '--eclipse-project-background',
+                        'linear-gradient(#080b13, #080b13)'
+                    )
+                }
+            }
+
+            const originalUpdateSelectedServer = window.updateSelectedServer
+
+            if(typeof originalUpdateSelectedServer === 'function'){
+                window.updateSelectedServer = function(serv){
+                    const result = originalUpdateSelectedServer.apply(this, arguments)
+                    updateProjectVisuals(serv?.rawServer?.id)
+                    return result
+                }
+            }
+
+            // The EJS is inserted after landing.js, so the DOM already exists here.
+            updateProjectVisuals()
+
+            window.updateProjectVisuals = updateProjectVisuals
+            window.updateProjectTitle = updateProjectVisuals
+        })()
+    </script>
 </div>

@@ -1,13 +1,13 @@
 {
-  "name": "aclipselauncher",
-  "version": "0.1.0-aplha",
+  "name": "eclipselauncher",
+  "version": "1.0.0",
   "productName": "Eclipse Launcher",
   "description": "Launcher oficial de E5 Studios para Abystale y futuros proyectos.",
   "author": "E5 Studios; basado en Helios Launcher por Daniel Scalzi",
   "license": "UNLICENSED",
-  "homepage": "https://github.com/dscalzi/HeliosLauncher",
+  "homepage": "https://github.com/e5studios/EclipseLauncher",
   "bugs": {
-    "url": "https://github.com/dscalzi/HeliosLauncher/issues"
+    "url": "https://github.com/e5studios/EclipseLauncher"
   },
   "private": true,
   "main": "index.js",
@@ -47,10 +47,23 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dscalzi/HeliosLauncher.git"
+    "url": "git+https://github.com/e5studios/EclipseLauncher.git"
   },
-  "allowScripts": {
-    "electron@39.8.10": true,
-    "electron-winstaller@5.4.0": true
+  "build": {
+  "appId": "cl.e5studios.eclipselauncher",
+  "productName": "Eclipse Launcher",
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "e5studios",
+      "repo": "EclipseLauncher"
+    }
+  ],
+  "win": {
+    "target": "nsis"
   }
-}
+},
+  "allowScripts": {
+  "electron@39.8.10": true,
+  "electron-winstaller@5.4.0": true
+}}

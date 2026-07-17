@@ -2449,8 +2449,30 @@ input:checked + .toggleSwitchSlider:before {
 #landingContainer {
     height: 100%;
     position: relative;
-    transition: background 2s ease;
     overflow-y: hidden;
+
+    /*
+     * Dynamic project background.
+     * The JavaScript in landing.ejs updates --eclipse-project-background.
+     */
+    --eclipse-project-background: url('../images/projects_backgrounds/abystale.jpg');
+
+    background-image:
+        linear-gradient(
+            to bottom,
+            rgba(0, 0, 0, 0.12) 0%,
+            rgba(0, 0, 0, 0.22) 58%,
+            rgba(0, 0, 0, 0.58) 100%
+        ),
+        var(--eclipse-project-background);
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-color: #080b13;
+
+    transition:
+        background-image 450ms ease,
+        filter 250ms ease;
 }
 
 /* Upper content container. */
@@ -2855,10 +2877,10 @@ input:checked + .toggleSwitchSlider:before {
 
 /* Logo image. */
 #image_seal {
-    height: 70px;
+    height: 200px;
     width: auto;
     position: relative;
-    border: 2px solid white;
+    border: 0px solid white;
     box-sizing: border-box;
     border-radius: 50%;
 }

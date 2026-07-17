@@ -3,9 +3,9 @@
  */
 // Requirements
 const { URL }                 = require('url')
+const nodeCrypto              = require('crypto')
 const {
-    MojangRestAPI,
-    getServerStatus
+    MojangRestAPI
 }                             = require('helios-core/mojang')
 const {
     RestResponseStatus,
@@ -33,6 +33,7 @@ const ProcessBuilder          = require('./assets/js/processbuilder')
 const EclipseOffline = require('./assets/js/scripts/eclipse/offline')
 const Modpack = require('./assets/js/scripts/eclipse/modpack')
 const Download = require('./assets/js/scripts/eclipse/download')
+const Updater = require('./assets/js/scripts/eclipse/updater')
 
 // Launch Elements
 const launch_content          = document.getElementById('launch_content')
@@ -102,73 +103,210 @@ function setLaunchEnabled(val){
     document.getElementById('launch_button').disabled = !val
 }
 
-// Eclipse Launcher - estado de instalación de Abystale
+// =====================================================
+// Eclipse Launcher - instalación y lanzamiento de proyectos
+// =====================================================
 const eclipseLaunchButton = document.getElementById('launch_button')
+let projectInfo = null
+let proc = null
 
-if (Modpack.isModpackInstalled()) {
-    eclipseLaunchButton.textContent = 'JUGAR'
-} else {
-    eclipseLaunchButton.textContent = 'DESCARGAR'
-}
-// Bind launch button
-document.getElementById('launch_button').addEventListener('click', async e => {
-    if (!Modpack.isModpackInstalled()) {
+async function updateLaunchButton(){
 
-    eclipseLaunchButton.textContent = 'DESCARGANDO...'
+    // Minecraft está abierto.
+    if(proc != null){
+        eclipseLaunchButton.textContent = 'CERRAR'
+        return
+    }
 
-    await Download.downloadFile(
-        'https://github.com/e5studios/Abystale-Launcher-Files/releases/download/v1.0.0/Abystale.v1.0.0.zip',
-        Modpack.ZIP_FILE
-    )
-
-    eclipseLaunchButton.textContent = 'INSTALANDO...'
+    if(!Modpack.isModpackInstalled()){
+        eclipseLaunchButton.textContent = 'DESCARGAR'
+        return
+    }
 
     try {
-    Modpack.installModpackFromZip()
-    Modpack.deleteDownloadedZip()
 
-    eclipseLaunchButton.textContent = 'JUGAR'
-    alert('Abystale se instaló correctamente.')
-} catch(err) {
-    console.error(err)
+        if(projectInfo == null){
+            projectInfo = await Updater.getProjectInfo()
+        }
 
-    eclipseLaunchButton.textContent = 'DESCARGAR'
+        const installedVersion = Modpack.getInstalledVersion()
 
-    alert(
-        'Error al instalar Abystale:\n\n' +
-        err.message
-    )
+        if(installedVersion == null){
+            eclipseLaunchButton.textContent = 'ACTUALIZAR'
+            return
+        }
+
+        if(installedVersion !== projectInfo.latestVersion){
+            eclipseLaunchButton.textContent = 'ACTUALIZAR'
+        } else {
+            eclipseLaunchButton.textContent = 'JUGAR'
+        }
+
+    } catch(err){
+        console.error(err)
+
+        // Si GitHub no responde, permite jugar.
+        eclipseLaunchButton.textContent = 'JUGAR'
+    }
 }
 
-    eclipseLaunchButton.textContent = 'JUGAR'
+updateLaunchButton().catch(console.error)
 
-    alert('Abystale se instaló correctamente.')
-    return
-}
-    loggerLanding.info('Launching game..')
+// Bind launch button.
+eclipseLaunchButton.addEventListener('click', async () => {
+    if(eclipseLaunchButton.disabled){
+        return
+    }
+
+    // Si Minecraft está abierto, cerrar solamente Eclipse Launcher.
+    if(proc != null){
+        remote.getCurrentWindow().close()
+        return
+    }
+
+    setLaunchEnabled(false)
+
     try {
-        const server = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
-        const jExe = ConfigManager.getJavaExecutable(ConfigManager.getSelectedServer())
+        const isInstalled = Modpack.isModpackInstalled()
+
+        if(projectInfo == null){
+            setLaunchDetails('Comprobando la versión de Abystale...')
+            projectInfo = await Updater.getProjectInfo()
+        }
+
+        const installedVersion = Modpack.getInstalledVersion()
+        const latestVersion = projectInfo.latestVersion
+
+        const needsInstallation = !isInstalled
+        const needsUpdate = isInstalled && installedVersion !== latestVersion
+
+        if(needsInstallation || needsUpdate){
+            toggleLaunchArea(true)
+            setLaunchPercentage(0)
+
+            const operationName = needsUpdate
+                ? 'actualización'
+                : 'descarga'
+
+            setLaunchDetails(
+                needsUpdate
+                    ? `Preparando actualización de Abystale v${latestVersion}...`
+                    : `Preparando descarga de Abystale v${latestVersion}...`
+            )
+
+            eclipseLaunchButton.textContent = needsUpdate
+                ? 'ACTUALIZANDO...'
+                : 'DESCARGANDO...'
+
+            await Download.downloadFile(
+                projectInfo.downloadUrl,
+                Modpack.ZIP_FILE,
+                ({ percentage }) => {
+                    setLaunchDetails(
+                        needsUpdate
+                            ? `Descargando actualización... ${percentage}%`
+                            : `Descargando Abystale... ${percentage}%`
+                    )
+
+                    setDownloadPercentage(percentage)
+                }
+            )
+
+            eclipseLaunchButton.textContent = 'INSTALANDO...'
+
+            setLaunchDetails(
+                needsUpdate
+                    ? `Instalando Abystale v${latestVersion}...`
+                    : `Instalando Abystale v${latestVersion}...`
+            )
+
+            remote.getCurrentWindow().setProgressBar(2)
+
+            Modpack.installModpackFromZip(latestVersion)
+            Modpack.deleteDownloadedZip()
+
+            remote.getCurrentWindow().setProgressBar(-1)
+            setLaunchPercentage(100)
+
+            setLaunchDetails(
+                needsUpdate
+                    ? `Abystale se actualizó correctamente a la versión ${latestVersion}.`
+                    : `Abystale v${latestVersion} se instaló correctamente.`
+            )
+
+            await updateLaunchButton()
+            toggleLaunchArea(false)
+
+            alert(
+                needsUpdate
+                    ? `Abystale se actualizó correctamente a la versión ${latestVersion}.`
+                    : `Abystale v${latestVersion} se instaló correctamente.`
+            )
+
+            return
+        }
+
+        loggerLanding.info('Launching game..')
+
+        const server = (
+            await DistroAPI.getDistribution()
+        ).getServerById(
+            ConfigManager.getSelectedServer()
+        )
+
+        if(server == null){
+            throw new Error(
+                'No se encontró el proyecto seleccionado en la distribución.'
+            )
+        }
+
+        const jExe = ConfigManager.getJavaExecutable(
+            ConfigManager.getSelectedServer()
+        )
+
         if(jExe == null){
             await asyncSystemScan(server.effectiveJavaOptions)
-        } else {
-
-            setLaunchDetails(Lang.queryJS('landing.launch.pleaseWait'))
-            toggleLaunchArea(true)
-            setLaunchPercentage(0, 100)
-
-            const details = await validateSelectedJvm(ensureJavaDirIsRoot(jExe), server.effectiveJavaOptions.supported)
-            if(details != null){
-                loggerLanding.info('Jvm Details', details)
-                await dlAsync()
-
-            } else {
-                await asyncSystemScan(server.effectiveJavaOptions)
-            }
+            return
         }
+
+        setLaunchDetails(
+            Lang.queryJS('landing.launch.pleaseWait')
+        )
+
+        toggleLaunchArea(true)
+        setLaunchPercentage(0)
+
+        const details = await validateSelectedJvm(
+            ensureJavaDirIsRoot(jExe),
+            server.effectiveJavaOptions.supported
+        )
+
+        if(details != null){
+            loggerLanding.info('Jvm Details', details)
+            await dlAsync()
+        } else {
+            await asyncSystemScan(server.effectiveJavaOptions)
+        }
+
     } catch(err) {
-        loggerLanding.error('Unhandled error in during launch process.', err)
-        showLaunchFailure(Lang.queryJS('landing.launch.failureTitle'), Lang.queryJS('landing.launch.failureText'))
+        remote.getCurrentWindow().setProgressBar(-1)
+
+        loggerLanding.error(
+            'Eclipse Launcher operation failed.',
+            err
+        )
+
+        await updateLaunchButton().catch(console.error)
+        toggleLaunchArea(false)
+
+        showLaunchFailure(
+            'Error de Eclipse Launcher',
+            err?.displayable
+                || err?.message
+                || 'Ocurrió un error desconocido.'
+        )
+    } finally {
+        setLaunchEnabled(true)
     }
 })
 
@@ -188,35 +326,60 @@ document.getElementById('avatarOverlay').onclick = async e => {
 
 // Bind selected account
 function updateSelectedAccount(authUser){
-    let username = EclipseOffline.getUsername() || 'Jugador'
-    
-    if(authUser != null){
-        if(authUser.uuid != null){
-            document.getElementById('avatarContainer').style.backgroundImage = `url('https://mc-heads.net/body/${authUser.uuid}/right')`
-        }
-    }
-    user_text.innerHTML = username
+    const username = EclipseOffline.getUsername() || 'Jugador'
+    const avatarContainer = document.getElementById('avatarContainer')
+
+    user_text.textContent = username
+
+    avatarContainer.style.backgroundImage =
+        `url('https://mc-heads.net/avatar/${encodeURIComponent(username)}/128')`
+
+    avatarContainer.style.backgroundSize = 'cover'
+    avatarContainer.style.backgroundPosition = 'center'
+    avatarContainer.style.backgroundRepeat = 'no-repeat'
 }
 updateSelectedAccount(ConfigManager.getSelectedAccount())
 
-// Bind selected server
-function updateSelectedServer(serv){
+// Bind selected project
+async function updateSelectedServer(serv){
     if(getCurrentView() === VIEWS.settings){
         fullSettingsSave()
     }
+
     ConfigManager.setSelectedServer(serv != null ? serv.rawServer.id : null)
     ConfigManager.save()
-    server_selection_button.innerHTML = '&#8226; ' + (serv != null ? serv.rawServer.name : Lang.queryJS('landing.noSelection'))
+
+    const installedVersion = Modpack.getInstalledVersion()
+
+    let displayVersion = installedVersion || serv?.rawServer?.version
+
+    try {
+        if(projectInfo == null){
+            projectInfo = await Updater.getProjectInfo()
+        }
+
+        if(installedVersion == null && projectInfo?.latestVersion){
+            displayVersion = projectInfo.latestVersion
+        }
+    } catch(err){
+        console.error(err)
+    }
+
+    server_selection_button.textContent = serv != null
+        ? `${serv.rawServer.name} · v${displayVersion}`
+        : Lang.queryJS('landing.noSelection')
+
     if(getCurrentView() === VIEWS.settings){
         animateSettingsTabRefresh()
     }
+
     setLaunchEnabled(serv != null)
 }
 // Real text is set in uibinder.js on distributionIndexDone.
-/*server_selection_button.onclick = async e => {
+server_selection_button.onclick = async e => {
     e.target.blur()
     await toggleServerSelection(true)
-}*/
+}
 
 // Update Mojang Status Color
 const refreshMojangStatuses = async function(){
@@ -278,7 +441,7 @@ const refreshMojangStatuses = async function(){
 }
 
 const refreshServerStatus = async (fade = false) => {
-    loggerLanding.info('Refreshing Server Status')
+    loggerLanding.info('Refreshing Project Status')
     const serv = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
 
     let pLabel = Lang.queryJS('landing.serverStatus.server')
@@ -309,12 +472,9 @@ const refreshServerStatus = async (fade = false) => {
 }
 
 refreshMojangStatuses()
-// Server Status is refreshed in uibinder.js on distributionIndexDone.
 
 // Refresh statuses every hour. The status page itself refreshes every day so...
 let mojangStatusListener = setInterval(() => refreshMojangStatuses(true), 60*60*1000)
-// Set refresh rate to once every 5 minutes.
-let serverStatusListener = setInterval(() => refreshServerStatus(true), 300000)
 
 /**
  * Shows an error overlay, toggles off the launch area.
@@ -478,7 +638,6 @@ async function downloadJava(effectiveJavaOptions, launchAfter = true) {
 }
 
 // Keep reference to Minecraft Process
-let proc
 // Is DiscordRPC enabled
 let hasRPC = false
 // Joined server regex
@@ -509,11 +668,38 @@ async function dlAsync(login = true) {
 
     const serv = distro.getServerById(ConfigManager.getSelectedServer())
 
-    if(login) {
-        if(ConfigManager.getSelectedAccount() == null){
-            loggerLanding.error('You must be logged into an account.')
+    let authUser = ConfigManager.getSelectedAccount()
+
+    if(login && authUser == null){
+        const offlineUsername = EclipseOffline.getUsername()
+
+        if(!EclipseOffline.isValidUsername(offlineUsername)){
+            showLaunchFailure(
+                'Nombre de usuario inválido',
+                'Configura un nombre de 3 a 16 caracteres antes de jugar.'
+            )
             return
         }
+
+        const offlineUUID = nodeCrypto
+            .createHash('md5')
+            .update(`OfflinePlayer:${offlineUsername}`)
+            .digest('hex')
+
+        ConfigManager.addMojangAuthAccount(
+            offlineUUID,
+            'offline',
+            offlineUsername,
+            offlineUsername
+        )
+        ConfigManager.setSelectedAccount(offlineUUID)
+        ConfigManager.save()
+        authUser = ConfigManager.getSelectedAccount()
+    }
+
+    if(login && authUser == null){
+        showLaunchFailure('Cuenta local', 'No se pudo crear la cuenta local de Eclipse Launcher.')
+        return
     }
 
     setLaunchDetails(Lang.queryJS('landing.dlAsync.pleaseWait'))
@@ -530,15 +716,18 @@ async function dlAsync(login = true) {
 
     fullRepairModule.spawnReceiver()
 
-    fullRepairModule.childProcess.on('error', (err) => {
-        loggerLaunchSuite.error('Error during launch', err)
-        showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringLaunchTitle'), err.message || Lang.queryJS('landing.dlAsync.errorDuringLaunchText'))
-    })
-    fullRepairModule.childProcess.on('close', (code, _signal) => {
-        if(code !== 0){
-            loggerLaunchSuite.error(`Full Repair Module exited with code ${code}, assuming error.`)
-            showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringLaunchTitle'), Lang.queryJS('landing.dlAsync.seeConsoleForDetails'))
+    // Helios Core desconecta automáticamente el receptor cuando una validación
+    // o descarga falla. Por eso no debemos tratar cada cierre del proceso como
+    // un segundo error ni intentar desconectarlo dos veces.
+    const closeRepairReceiverSafely = () => {
+        const receiver = fullRepairModule.childProcess
+        if(receiver != null && receiver.connected){
+            fullRepairModule.destroyReceiver()
         }
+    }
+
+    fullRepairModule.childProcess.on('error', (err) => {
+        loggerLaunchSuite.error('Full Repair receiver error.', err)
     })
 
     loggerLaunchSuite.info('Validating files.')
@@ -550,8 +739,10 @@ async function dlAsync(login = true) {
         })
         setLaunchPercentage(100)
     } catch (err) {
-        loggerLaunchSuite.error('Error during file validation.')
-        showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringFileVerificationTitle'), err.displayable || Lang.queryJS('landing.dlAsync.seeConsoleForDetails'))
+        loggerLaunchSuite.error('Error during file validation.', err)
+        showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringFileVerificationTitle'), err.displayable || err.message || Lang.queryJS('landing.dlAsync.seeConsoleForDetails'))
+        closeRepairReceiverSafely()
+        remote.getCurrentWindow().setProgressBar(-1)
         return
     }
     
@@ -566,18 +757,22 @@ async function dlAsync(login = true) {
             })
             setDownloadPercentage(100)
         } catch(err) {
-            loggerLaunchSuite.error('Error during file download.')
-            showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringFileDownloadTitle'), err.displayable || Lang.queryJS('landing.dlAsync.seeConsoleForDetails'))
+            loggerLaunchSuite.error('Error during file download.', err)
+            showLaunchFailure(
+                Lang.queryJS('landing.dlAsync.errorDuringFileDownloadTitle'),
+                err.displayable || err.message || Lang.queryJS('landing.dlAsync.seeConsoleForDetails')
+            )
+            closeRepairReceiverSafely()
+            remote.getCurrentWindow().setProgressBar(-1)
             return
         }
-    } else {
-        loggerLaunchSuite.info('No invalid files, skipping download.')
     }
+
 
     // Remove download bar.
     remote.getCurrentWindow().setProgressBar(-1)
 
-    fullRepairModule.destroyReceiver()
+    closeRepairReceiverSafely()
 
     setLaunchDetails(Lang.queryJS('landing.dlAsync.preparingToLaunch'))
 
@@ -650,22 +845,35 @@ async function dlAsync(login = true) {
             // Build Minecraft process.
             proc = pb.build()
 
+            // Cambiar el botón mientras Minecraft está abierto.
+            eclipseLaunchButton.textContent = 'CERRAR'
+
             // Bind listeners to stdout.
             proc.stdout.on('data', tempListener)
             proc.stderr.on('data', gameErrorListener)
+
+            // Detectar cuando Minecraft se cierre.
+            proc.on('close', async () => {
+                if(hasRPC){
+                    loggerLaunchSuite.info('Shutting down Discord Rich Presence..')
+                    DiscordWrapper.shutdownRPC()
+                    hasRPC = false
+                }
+
+                proc = null
+                await updateLaunchButton().catch(console.error)
+            })
 
             setLaunchDetails(Lang.queryJS('landing.dlAsync.doneEnjoyServer'))
 
             // Init Discord Hook
             if(distro.rawDistribution.discord != null && serv.rawServer.discord != null){
-                DiscordWrapper.initRPC(distro.rawDistribution.discord, serv.rawServer.discord)
+                DiscordWrapper.initRPC(
+                    distro.rawDistribution.discord,
+                    serv.rawServer.discord
+                )
+
                 hasRPC = true
-                proc.on('close', (code, signal) => {
-                    loggerLaunchSuite.info('Shutting down Discord Rich Presence..')
-                    DiscordWrapper.shutdownRPC()
-                    hasRPC = false
-                    proc = null
-                })
             }
 
         } catch(err) {
@@ -842,7 +1050,7 @@ function showNewsAlert(){
 
 async function digestMessage(str) {
     const msgUint8 = new TextEncoder().encode(str)
-    const hashBuffer = await crypto.subtle.digest('SHA-1', msgUint8)
+    const hashBuffer = await globalThis.crypto.subtle.digest('SHA-1', msgUint8)
     const hashArray = Array.from(new Uint8Array(hashBuffer))
     const hashHex = hashArray
         .map((b) => b.toString(16).padStart(2, '0'))
@@ -1021,7 +1229,7 @@ async function loadNews(){
                     const el = $(items[i])
 
                     // Resolve date.
-                    const date = new Date(el.find('pubDate').text()).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric'})
+                    const date = new Date(el.find('pubDate').text()).toLocaleDateString('en-CL', {month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric'})
 
                     // Resolve comments.
                     let comments = el.find('slash\\:comments').text() || '0'

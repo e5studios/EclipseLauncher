@@ -2,6 +2,31 @@
  * Script for overlay.ejs
  */
 
+
+/**
+ * Resolve the icon used by Eclipse Launcher for a registered project.
+ * Local project artwork has priority so the selector works even if
+ * GitHub is unavailable or the distribution cache is outdated.
+ *
+ * @param {Object} server Project/server model from the distribution.
+ * @returns {string} Image source for the project icon.
+ */
+function resolveEclipseProjectIcon(server){
+    const raw = server?.rawServer || server || {}
+    const projectId = String(raw.id || '').toLowerCase()
+
+    if(projectId === 'abystale-1.20.1' || projectId.startsWith('abystale')){
+        return 'assets/images/abystale_icon.png'
+    }
+
+    const remoteIcon = typeof raw.icon === 'string' ? raw.icon.trim() : ''
+    if(remoteIcon && remoteIcon.toLowerCase() !== 'null'){
+        return remoteIcon
+    }
+
+    return 'assets/images/EclipseLogo.png'
+}
+
 /* Overlay Wrapper Functions */
 
 /**
@@ -117,6 +142,7 @@ function toggleOverlay(toggleState, dismissable = false, content = 'overlayConte
     }
 }
 
+// Eclipse Launcher: reutiliza el selector original como selector de proyectos.
 async function toggleServerSelection(toggleState){
     await prepareServerSelectionList()
     toggleOverlay(toggleState, true, 'serverSelectContent')
@@ -177,14 +203,13 @@ document.getElementById('serverSelectConfirm').addEventListener('click', async (
         if(listings[i].hasAttribute('selected')){
             const serv = (await DistroAPI.getDistribution()).getServerById(listings[i].getAttribute('servid'))
             updateSelectedServer(serv)
-            refreshServerStatus(true)
             toggleOverlay(false)
             return
         }
     }
     // None are selected? Not possible right? Meh, handle it.
     if(listings.length > 0){
-        const serv = (await DistroAPI.getDistribution()).getServerById(listings[i].getAttribute('servid'))
+        const serv = (await DistroAPI.getDistribution()).getServerById(listings[0].getAttribute('servid'))
         updateSelectedServer(serv)
         toggleOverlay(false)
     }
@@ -218,7 +243,7 @@ document.getElementById('accountSelectConfirm').addEventListener('click', async 
     }
 })
 
-// Bind server select cancel button.
+// Bind project select cancel button.
 document.getElementById('serverSelectCancel').addEventListener('click', () => {
     toggleOverlay(false)
 })
@@ -272,15 +297,27 @@ async function populateServerListings(){
     const giaSel = ConfigManager.getSelectedServer()
     const servers = distro.servers
     let htmlString = ''
-    for(const serv of servers){
+
+    let displayVersion = Modpack.getInstalledVersion()
+
+    if(!displayVersion){
+        try {
+            const info = await Updater.getProjectInfo()
+            displayVersion = info?.latestVersion || null
+        } catch(err){
+            console.error('No se pudo obtener la versión más reciente:', err)
+        }
+    }
+
+for(const serv of servers){
         htmlString += `<button class="serverListing" servid="${serv.rawServer.id}" ${serv.rawServer.id === giaSel ? 'selected' : ''}>
-            <img class="serverListingImg" src="${serv.rawServer.icon}"/>
+            <img class="serverListingImg" src="${resolveEclipseProjectIcon(serv)}" onerror="this.onerror=null;this.src='assets/images/EclipseIcon.png';"/>
             <div class="serverListingDetails">
                 <span class="serverListingName">${serv.rawServer.name}</span>
                 <span class="serverListingDescription">${serv.rawServer.description}</span>
                 <div class="serverListingInfo">
                     <div class="serverListingVersion">${serv.rawServer.minecraftVersion}</div>
-                    <div class="serverListingRevision">${serv.rawServer.version}</div>
+                    <div class="serverListingRevision">${displayVersion || serv.rawServer.version}</div>
                     ${serv.rawServer.mainServer ? `<div class="serverListingStarWrapper">
                         <svg id="Layer_1" viewBox="0 0 107.45 104.74" width="20px" height="20px">
                             <defs>

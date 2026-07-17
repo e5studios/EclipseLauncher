@@ -5,6 +5,31 @@ const semver = require('semver')
 const DropinModUtil  = require('./assets/js/dropinmodutil')
 const { MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR } = require('./assets/js/ipcconstants')
 
+
+/**
+ * Resolve the icon used by Eclipse Launcher for a registered project.
+ * Local project artwork has priority so the selector works even if
+ * GitHub is unavailable or the distribution cache is outdated.
+ *
+ * @param {Object} server Project/server model from the distribution.
+ * @returns {string} Image source for the project icon.
+ */
+function resolveEclipseProjectIcon(server){
+    const raw = server?.rawServer || server || {}
+    const projectId = String(raw.id || '').toLowerCase()
+
+    if(projectId === 'abystale-1.20.1' || projectId.startsWith('abystale')){
+        return 'assets/images/abystale_icon.png'
+    }
+
+    const remoteIcon = typeof raw.icon === 'string' ? raw.icon.trim() : ''
+    if(remoteIcon && remoteIcon.toLowerCase() !== 'null'){
+        return remoteIcon
+    }
+
+    return 'assets/images/EclipseIcon.png'
+}
+
 const settingsState = {
     invalid: new Set()
 }
@@ -1073,15 +1098,27 @@ function bindShaderpackButton() {
 async function loadSelectedServerOnModsTab(){
     const serv = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
 
+    let displayVersion = Modpack.getInstalledVersion()
+
+    if(displayVersion == null){
+        try{
+            const info = await Updater.getProjectInfo()
+            displayVersion = info.latestVersion
+        }catch(err){
+            console.error(err)
+            displayVersion = serv.rawServer.version
+        }
+    }
+
     for(const el of document.getElementsByClassName('settingsSelServContent')) {
         el.innerHTML = `
-            <img class="serverListingImg" src="${serv.rawServer.icon}"/>
+            <img class="serverListingImg" src="${resolveEclipseProjectIcon(serv)}" onerror="this.onerror=null;this.src='assets/images/EclipseIcon.png';"/>
             <div class="serverListingDetails">
                 <span class="serverListingName">${serv.rawServer.name}</span>
                 <span class="serverListingDescription">${serv.rawServer.description}</span>
                 <div class="serverListingInfo">
                     <div class="serverListingVersion">${serv.rawServer.minecraftVersion}</div>
-                    <div class="serverListingRevision">${serv.rawServer.version}</div>
+                    <div class="serverListingRevision">${displayVersion}</div>
                     ${serv.rawServer.mainServer ? `<div class="serverListingStarWrapper">
                         <svg id="Layer_1" viewBox="0 0 107.45 104.74" width="20px" height="20px">
                             <defs>
@@ -1098,7 +1135,7 @@ async function loadSelectedServerOnModsTab(){
     }
 }
 
-// Bind functionality to the server switch button.
+// Eclipse Launcher: cambiar el proyecto seleccionado desde Configuración → Java.
 Array.from(document.getElementsByClassName('settingsSwitchServerButton')).forEach(el => {
     el.addEventListener('click', async e => {
         e.target.blur()

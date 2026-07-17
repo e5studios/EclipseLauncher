@@ -7,7 +7,7 @@ const logger = LoggerUtil.getLogger('ConfigManager')
 
 const sysRoot = process.env.APPDATA || (process.platform == 'darwin' ? process.env.HOME + '/Library/Application Support' : process.env.HOME)
 
-const dataPath = path.join(sysRoot, '.helioslauncher')
+const dataPath = path.join(sysRoot, 'E5 Studios', 'EclipseLauncher')
 
 const launcherDir = require('@electron/remote').app.getPath('userData')
 
@@ -147,9 +147,16 @@ exports.load = function(){
             exports.save()
         }
         if(doValidate){
-            config = validateKeySet(DEFAULT_CONFIG, config)
-            exports.save()
+        config = validateKeySet(DEFAULT_CONFIG, config)
+
+        const oldDataPath = path.join(sysRoot, '.helioslauncher')
+
+        if(config.settings.launcher.dataDirectory === oldDataPath){
+            config.settings.launcher.dataDirectory = dataPath
         }
+
+        exports.save()
+    }
     }
     logger.info('Successfully Loaded')
 }
@@ -338,6 +345,29 @@ exports.updateMojangAuthAccount = function(uuid, accessToken){
  * @returns {Object} The authenticated account object created by this action.
  */
 exports.addMojangAuthAccount = function(uuid, accessToken, username, displayName){
+    /**
+ * Adds a local offline account to the launcher database.
+ *
+ * @param {string} uuid UUID generated from the offline username.
+ * @param {string} username In-game username.
+ * @returns {Object} The created offline account.
+ */
+exports.addOfflineAuthAccount = function(uuid, username){
+    const cleanUsername = username.trim()
+    const cleanUuid = uuid.trim()
+
+    config.selectedAccount = cleanUuid
+
+    config.authenticationDatabase[cleanUuid] = {
+        type: 'offline',
+        accessToken: 'offline',
+        username: cleanUsername,
+        uuid: cleanUuid,
+        displayName: cleanUsername
+    }
+
+    return config.authenticationDatabase[cleanUuid]
+}
     config.selectedAccount = uuid
     config.authenticationDatabase[uuid] = {
         type: 'mojang',
