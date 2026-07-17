@@ -1,6 +1,4 @@
-/node_modules/
-/.vs/
-/.vscode/
-/target/
-/logs/
-/dist/
+node_modules/
+dist/
+*.log
+.env
