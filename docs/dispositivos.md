@@ -14,4 +14,5 @@ de Instalación y Uso (cláusula 1).
 
 | Fecha (UTC) | Equipo | Sistema operativo | CPU | GPU | RAM | Launcher | ID |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-10-29 18:12 UTC | Usuario-b423fc | Windows_NT 10.0.26300 (x64) | Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz | Intel(R) UHD Graphics 620 | 7.9 GB | BETA 2.0.0 | b423fc30 |
 <!-- FIN_DATOS -->
