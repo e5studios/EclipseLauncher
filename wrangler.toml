@@ -1,0 +1,12 @@
+# Cloudflare Workers - receptor de telemetria de Eclipse Launcher.
+#
+# Cloudflare ejecuta `npx wrangler deploy` en la raiz del repositorio.
+# Este archivo le indica que el Worker vive en docs/telemetry-worker.js.
+#
+# Las variables (GITHUB_TOKEN, SHARED_KEY, etc.) se configuran en el panel
+# del Worker: Settings -> Variables and Secrets. No van en este archivo.
+
+name = "eclipse-telemetry"
+main = "docs/telemetry-worker.js"
+compatibility_date = "2026-10-29"
+workers_dev = true
