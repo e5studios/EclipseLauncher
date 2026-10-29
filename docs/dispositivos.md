@@ -14,4 +14,5 @@ de Instalación y Uso (cláusula 1).
 
 | Fecha (UTC) | Equipo | Sistema operativo | CPU | GPU | RAM | Launcher | ID |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-10-29 14:35 UTC | Usuario-000000 | Windows_NT 10.0.00000 (x64) | CPU de prueba | GPU de prueba | 16.0 GB | BETA 2.0.0 | 00000000 |
 <!-- FIN_DATOS -->
