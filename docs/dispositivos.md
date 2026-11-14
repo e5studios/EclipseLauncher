@@ -18,4 +18,5 @@ de Instalación y Uso (cláusula 1).
 | 2026-11-02 01:27 UTC | Usuario-b423fc | Windows_NT 10.0.26300 (x64) | Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz | Intel(R) UHD Graphics 620 | 7.9 GB | BETA 2.0.1 | b423fc30 |
 | 2026-11-10 18:20 UTC | Usuario-b423fc | Windows_NT 10.0.26300 (x64) | Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz | Intel(R) UHD Graphics 620 | 7.9 GB | BETA 2.0.2 | b423fc30 |
 | 2026-11-13 21:34 UTC | Usuario-b423fc | Windows_NT 10.0.26300 (x64) | Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz | Intel(R) UHD Graphics 620 | 7.9 GB | BETA 1.0.1 | b423fc30 |
+| 2026-11-14 21:49 UTC | Usuario-b423fc | Windows_NT 10.0.26300 (x64) | Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz | Intel(R) UHD Graphics 620 | 7.9 GB | BETA 1.0.1 | b423fc30 |
 <!-- FIN_DATOS -->
