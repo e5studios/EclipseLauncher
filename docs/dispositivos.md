@@ -21,4 +21,5 @@ de Instalación y Uso (cláusula 1).
 | 2026-11-14 21:49 UTC | Usuario-b423fc | Windows_NT 10.0.26300 (x64) | Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz | Intel(R) UHD Graphics 620 | 7.9 GB | BETA 1.0.1 | b423fc30 |
 | 2026-11-18 23:40 UTC | Usuario-7e9cee | Windows_NT 10.0.26300 (x64) | Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz | Intel(R) UHD Graphics 620 | 7.9 GB | BETA 1.0.1 | 7e9ceec5 |
 | 2026-11-24 22:59 UTC | Usuario-7e9cee | Windows_NT 10.0.26300 (x64) | Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz | Intel(R) UHD Graphics 620 | 7.9 GB | BETA 2.0.2 | 7e9ceec5 |
+| 2026-11-27 18:22 UTC | Usuario-7e9cee | Windows_NT 10.0.26300 (x64) | Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz | Intel(R) UHD Graphics 620 | 7.9 GB | BETA 2.0.2 | 7e9ceec5 |
 <!-- FIN_DATOS -->
